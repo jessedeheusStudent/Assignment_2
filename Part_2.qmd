@@ -1,0 +1,17 @@
+---
+title: "Part_2"
+format: html
+editor: visual
+---
+
+# Load data
+
+```{r}
+#| echo: TRUE
+```
+
+# Logistic Regression Model
+
+```{r}
+#| echo: TRUE
+```
