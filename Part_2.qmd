@@ -66,6 +66,9 @@ model <- glm(EVENT ~ AGE + SEX + BMI + SYSTH + HDL + DIABETES + HISTCAR2 +
 ```{r}
 #| echo: TRUE
 
+# same proportion in every fold, check if that is correct
+# way of validating the final model of part 1 with no external data available
+
 library(caret)
 
 set.seed(1234)
@@ -87,6 +90,8 @@ model_glm <- train(
   trControl = train_control
 )
 ```
+
+\#
 
 # Question B
 
