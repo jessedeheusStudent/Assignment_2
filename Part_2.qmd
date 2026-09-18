@@ -7,7 +7,9 @@ editor: visual
 ```{r}
 #| echo: FALSE
 # install packages if necessary
-#install.packages()
+#install.packages("caret")
+#install.packages("lattice")
+#install.packages("recipes")
 
 ```
 
@@ -63,6 +65,27 @@ model <- glm(EVENT ~ AGE + SEX + BMI + SYSTH + HDL + DIABETES + HISTCAR2 +
 
 ```{r}
 #| echo: TRUE
+
+library(caret)
+
+set.seed(1234)
+
+folds <- createFolds(smart1$EVENT, k = 10, returnTrain = TRUE)
+
+train_control <- trainControl(
+  method = "cv",
+  number = 10,
+  index = folds 
+)
+
+model_glm <- train(
+  EVENT ~ AGE + SEX + BMI + SYSTH + HDL + DIABETES + HISTCAR2 +
+    HOMOC + log(CREAT) + STENOSIS + IMT + SMOKING + alcohol + albumin,
+  data = smart1,
+  method = "glm",
+  family = "binomial",
+  trControl = train_control
+)
 ```
 
 # Question B
