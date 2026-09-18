@@ -63,6 +63,8 @@ model <- glm(EVENT ~ AGE + SEX + BMI + SYSTH + HDL + DIABETES + HISTCAR2 +
 
 # Question A
 
+Cross validation gives an estimate of how a model built this way, from this much data, using this method, tends to perform.
+
 ```{r}
 #| echo: TRUE
 
@@ -70,15 +72,20 @@ model <- glm(EVENT ~ AGE + SEX + BMI + SYSTH + HDL + DIABETES + HISTCAR2 +
 # way of validating the final model of part 1 with no external data available
 
 library(caret)
+library(pROC)
 
 set.seed(1234)
 
-folds <- createFolds(smart1$EVENT, k = 10, returnTrain = TRUE)
+folds <- createFolds(smart1$EVENT, k = 5, returnTrain = TRUE) # ensures by default that EVENT proportions are equal 
+print(str(folds))
 
 train_control <- trainControl(
   method = "cv",
-  number = 10,
-  index = folds 
+  number = 5,
+  index = folds,
+  classProbs = TRUE,                  # needed to get predicted probabilities, not just class labels
+  summaryFunction = twoClassSummary,  # computes ROC/AUC, sensitivity, specificity
+  savePredictions = "final"           # keeps held-out predictions for plotting the ROC curve
 )
 
 model_glm <- train(
@@ -87,8 +94,34 @@ model_glm <- train(
   data = smart1,
   method = "glm",
   family = "binomial",
-  trControl = train_control
+  trControl = train_control,
+  metric = "ROC"                      # tells caret to select/report based on AUC
 )
+
+# View CV performance
+print(model_glm)
+model_glm$results     # mean ROC (AUC), Sens, Spec across the 5 folds
+
+# Extract the saved CV predictions
+cv_preds <- model_glm$pred
+
+# Build ROC object (probability of "yes" vs actual class)
+roc_obj <- roc(response = cv_preds$obs, 
+               predictor = cv_preds$yes,
+               levels = c("no", "yes"))
+
+# Plot
+plot(roc_obj, 
+     main = "ROC Curve (5-fold CV)", 
+     col = "blue", 
+     lwd = 2,
+     xlim = c(1, 0),
+     xaxs = "i",          
+     yaxs = "i",
+     xlab = "Specificity",
+     ylab = "Sensitivity")
+
+auc(roc_obj)
 ```
 
 \#
