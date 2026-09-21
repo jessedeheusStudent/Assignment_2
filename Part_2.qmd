@@ -8,6 +8,7 @@ editor: visual
 #| echo: FALSE
 # install packages if necessary
 #install.packages()
+install.packages("caret")
 
 ```
 
@@ -73,6 +74,22 @@ model <- glm(EVENT ~ AGE + SEX + BMI + SYSTH + HDL + DIABETES + HISTCAR2 +
 
 # Question C
 
+jesse
+
 ```{r}
 #| echo: TRUE
+
+library(caret)
+library(MASS)
+library(pROC)
+
+
+smart1$EVENT <- factor(
+  smart1$EVENT,
+  levels = c(1, 0),
+  labels = c("event", "no_event")
+)
+
+table(smart1$EVENT)
+
 ```
