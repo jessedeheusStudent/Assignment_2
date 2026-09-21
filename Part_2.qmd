@@ -63,7 +63,9 @@ model <- glm(EVENT ~ AGE + SEX + BMI + SYSTH + HDL + DIABETES + HISTCAR2 +
 
 # Question A
 
-Cross validation gives an estimate of how a model built this way, from this much data, using this method, tends to perform.
+The performance of the logistic regression model is evaluated using 5-folds cross validation (n = 3873). At the default probability threshold of 0.5, the mean sensitivity was 0.05 (SD = 0.02) and the mean specificity was 0.99 (SD = 0.05).
+
+The mean area under the ROC curve across the folds was 0.73 (SD = 0.03), and the AUC of the ROC based on the pooled cross-validated predictions was 0.73, see Figure. This means that a randomly chosen patient with an event receives a higher predicted probability than a randomly chosen patient without an event in about 73% of cases. This is better than the random classifier (AUC = 0.5), but far from perfect discrimination (AUC = 1). The ROC curve shows how sensitivity and specificity trade off as the threshold varies. For example, for a sensitivity of roughly 0.8, a specificity of roughly 0.5 should be accepted.
 
 ```{r}
 #| echo: TRUE
@@ -100,10 +102,13 @@ model_glm <- train(
 
 # View CV performance
 print(model_glm)
-model_glm$results     # mean ROC (AUC), Sens, Spec across the 5 folds
+model_glm$results     # mean ROC (AUC), Sens, Spec across the 5 fold (sensitivity and specificity are flipped due to sequence in labeling)
 
 # Extract the saved CV predictions
 cv_preds <- model_glm$pred
+
+# Confusion matrix at 0.5, using the labels caret stored
+confusionMatrix(cv_preds$pred, cv_preds$obs, positive = "yes")  # sensitivity for events
 
 # Build ROC object (probability of "yes" vs actual class)
 roc_obj <- roc(response = cv_preds$obs, 
@@ -123,8 +128,6 @@ plot(roc_obj,
 
 auc(roc_obj)
 ```
-
-\#
 
 # Question B
 
