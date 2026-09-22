@@ -15,37 +15,44 @@ editor: visual
 
 ```{r}
 #| echo: TRUE
-
 library(tidyverse)
+library(rsample)
+library(caret)
 
-#load data
+## 1. Read fresh
 smart1 <- read.csv2("smartc.csv")
 
+## 2. Convert the true categorical variables to factors FIRST
 smart1 <- smart1 %>%
   mutate(
-    # Binary yes/no variables
-    EVENT     = factor(EVENT,     levels = c(0, 1), labels = c("no", "yes")),
-    DIABETES  = factor(DIABETES,  levels = c(0, 1), labels = c("no", "yes")),
-    CEREBRAL  = factor(CEREBRAL,  levels = c(0, 1), labels = c("no", "yes")),
-    CARDIAC   = factor(CARDIAC,   levels = c(0, 1), labels = c("no", "yes")),
-    AAA       = factor(AAA,       levels = c(0, 1), labels = c("no", "yes")),
-    PERIPH    = factor(PERIPH,    levels = c(0, 1), labels = c("no", "yes")),
-    STENOSIS  = factor(STENOSIS,  levels = c(0, 1), labels = c("no", "yes")),
-    
-    # Binary but coded 1/2
-    SEX       = factor(SEX,       levels = c(1, 2), labels = c("male", "female")),
-    
-    # Multi-level nominal/ordinal variables
-    SMOKING   = factor(SMOKING,   levels = c(1, 2, 3), labels = c("never", "former", "current")),
-    alcohol   = factor(alcohol,   levels = c(1, 2, 3), labels = c("never", "former", "current")),
-    albumin   = factor(albumin, levels = c(1, 2, 3),
-                       labels = c("no", "micro", "macro"),
-                       ordered = TRUE))
-
-#change data types to numeric if necessary
-smart1 <- smart1 %>%
+    EVENT    = factor(EVENT,    levels = c(0,1),   labels = c("no","yes")),
+    DIABETES = factor(DIABETES, levels = c(0,1),   labels = c("no","yes")),
+    CEREBRAL = factor(CEREBRAL, levels = c(0,1),   labels = c("no","yes")),
+    CARDIAC  = factor(CARDIAC,  levels = c(0,1),   labels = c("no","yes")),
+    AAA      = factor(AAA,      levels = c(0,1),   labels = c("no","yes")),
+    PERIPH   = factor(PERIPH,   levels = c(0,1),   labels = c("no","yes")),
+    STENOSIS = factor(STENOSIS, levels = c(0,1),   labels = c("no","yes")),
+    SEX      = factor(SEX,      levels = c(1,2),   labels = c("male","female")),
+    SMOKING  = factor(SMOKING,  levels = c(1,2,3), labels = c("never","former","current")),
+    alcohol  = factor(alcohol,  levels = c(1,2,3), labels = c("never","former","current")),
+    albumin  = factor(albumin,  levels = c(1,2,3), labels = c("no","micro","macro"))
+  ) %>%
+  ## 3. Decimal columns read as text -> numeric. The factors above are left untouched.
   mutate(across(where(is.character), as.numeric))
 
+## 4. Sanity checks
+stopifnot(is.numeric(smart1$BMI), sum(is.na(smart1$EVENT)) == 0)
+str(smart1[c("EVENT", "BMI", "HDL", "IMT", "albumin")])  # EVENT/albumin factor; BMI/HDL/IMT num
+
+## 5. Split + fit (same model as 1c)
+set.seed(2026)
+smart_split <- initial_split(smart1, prop = 0.75, strata = EVENT)
+train_data  <- training(smart_split)
+test_data   <- testing(smart_split)
+
+fit <- glm(EVENT ~ AGE + SEX + BMI + SYSTH + HDL + DIABETES + HISTCAR2 +
+             HOMOC + log(CREAT) + STENOSIS + IMT + SMOKING + alcohol + albumin,
+           data = train_data, family = binomial)
 ```
 
 # Logistic Regression Model
@@ -69,6 +76,49 @@ model <- glm(EVENT ~ AGE + SEX + BMI + SYSTH + HDL + DIABETES + HISTCAR2 +
 
 ```{r}
 #| echo: TRUE
+
+# Calibration 
+
+# Predicted P(EVENT = "yes") on the test set + observed class
+testProbs <- tibble(
+  .pred_yes = predict(fit, newdata = test_data, type = "response"),
+  Class     = test_data$EVENT
+)
+
+# Calibration plot on the test data (caret, slide 31)
+cal_obj <- caret::calibration(Class ~ .pred_yes, data = testProbs,
+                              class = "yes", cuts = 10)
+ggplot(cal_obj) +
+  labs(title = "Calibration plot – test data",
+       x = "Bin midpoint (predicted probability)",
+       y = "Observed event percentage")
+```
+
+```{r}
+# Cross-validated calibration with intercept & slope
+library(rms)
+
+form <- EVENT ~ AGE + SEX + BMI + SYSTH + HDL + DIABETES + HISTCAR2 +
+  HOMOC + log(CREAT) + STENOSIS + IMT + SMOKING + alcohol + albumin
+
+set.seed(2026)
+K      <- 10
+folds  <- sample(rep(1:K, length.out = nrow(smart1)))
+cvprob <- rep(NA_real_, nrow(smart1))
+
+for (k in 1:K) {
+  m <- glm(form, data = smart1[folds != k, ], family = binomial)
+  cvprob[folds == k] <- predict(m, newdata = smart1[folds == k, ], type = "response")
+}
+
+# val.prob() needs the outcome as 0/1: factor "no"/"yes" -> 1/2 -> 0/1
+y01 <- as.numeric(smart1$EVENT) - 1
+
+cal_stats <- val.prob(cvprob, y01)   # draws the plot AND returns the statistics
+title("Cross-validated calibration plot (10-fold)")
+
+# Pull out the numbers you report in the text:
+round(cal_stats[c("Intercept", "Slope", "C (ROC)", "Brier")], 3)
 ```
 
 # Question C
