@@ -7,6 +7,7 @@ editor: visual
 ```{r}
 #| echo: FALSE
 #| warnings: FALSE
+#| message: FALSE
 # install packages if necessary
 #install.packages("caret")
 #install.packages("lattice")
@@ -19,6 +20,7 @@ editor: visual
 ```{r}
 #| echo: TRUE
 #| warnings: FALSE
+#| message: FALSE
 
 library(tidyverse)
 
@@ -57,6 +59,7 @@ smart1 <- smart1 %>%
 ```{r}
 #| echo: TRUE
 #| warnings: FALSE
+#| message: FALSE
 
 model <- glm(EVENT ~ AGE + SEX + BMI + SYSTH + HDL + DIABETES + HISTCAR2 +
                HOMOC + log(CREAT) + STENOSIS + IMT + SMOKING + alcohol + albumin,
@@ -66,13 +69,14 @@ model <- glm(EVENT ~ AGE + SEX + BMI + SYSTH + HDL + DIABETES + HISTCAR2 +
 
 # Question A
 
-The performance of the logistic regression model is evaluated using 5-folds cross validation (n = 3873). At the default probability threshold of 0.5, the mean sensitivity was 0.05 (SD = 0.02) and the mean specificity was 0.99 (SD = 0.05).
+The performance of the logistic regression model is evaluated using 5-folds cross validation (n = 3873). At the default probability threshold of 0.5, the mean sensitivity was 0.05 (SD = 0.02) and the mean specificity was 0.99 (SD = 0.05). The mean positive predictive value is 0.45, meaning that 45% of positive predictions were correct. The mean negative predictive value is 0.89, meaning that 89% of negative predictions were correct. However, the PPV and NPV are strongly influenced by the prevalence in this cohort (approximately 12%), a higher prevalence would expected to yield a higher PPV and a lower NPV even with the same underlying model performance.
 
 The mean area under the ROC curve across the folds was 0.73 (SD = 0.03), and the AUC of the ROC based on the pooled cross-validated predictions was 0.73, see Figure. This means that a randomly chosen patient with an event receives a higher predicted probability than a randomly chosen patient without an event in about 73% of cases. This is better than the random classifier (AUC = 0.5), but far from perfect discrimination (AUC = 1). Furthermore, the ROC curve shows how sensitivity and specificity trade off as the threshold varies. For example, for a sensitivity of roughly 0.8, a specificity of roughly 0.5 should be accepted.
 
 ```{r}
 #| echo: TRUE
 #| warnings: FALSE
+#| message: FALSE
 
 # same proportion in every fold, check if that is correct
 # way of validating the final model of part 1 with no external data available
@@ -106,7 +110,7 @@ model_glm <- train(
 
 # View CV performance
 print(model_glm)
-model_glm$results     # mean ROC (AUC), Sens, Spec across the 5 fold (sensitivity and specificity are flipped due to sequence in labeling)
+print(model_glm$results)     # mean ROC (AUC), Sens, Spec across the 5 fold (sensitivity and specificity are flipped due to sequence in labeling)
 
 # Extract the saved CV predictions
 cv_preds <- model_glm$pred
