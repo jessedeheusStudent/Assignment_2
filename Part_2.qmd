@@ -8,7 +8,7 @@ Authors: Hilde Gelinck, Niels Pleijsier and Jesse de Heus
 
 ```{r}
 #| echo: FALSE
-#| warnings: FALSE
+#| warning: FALSE
 #| message: FALSE
 # install packages if necessary
 #install.packages()
@@ -22,7 +22,7 @@ Authors: Hilde Gelinck, Niels Pleijsier and Jesse de Heus
 
 ```{r}
 #| echo: TRUE
-#| warnings: FALSE
+#| warning: FALSE
 #| message: FALSE
 library(tidyverse)
 library(rsample)
@@ -61,7 +61,7 @@ str(smart1[c("EVENT", "BMI", "HDL", "IMT", "albumin")])  # EVENT/albumin factor;
 
 ```{r}
 #| echo: TRUE
-#| warnings: FALSE
+#| warning: FALSE
 #| message: FALSE
 
 model <- glm(EVENT ~ AGE + SEX + BMI + SYSTH + HDL + DIABETES + HISTCAR2 +
@@ -78,7 +78,7 @@ The mean area under the ROC curve across the folds was 0.73 (SD = 0.03), and the
 
 ```{r}
 #| echo: TRUE
-#| warnings: FALSE
+#| warning: FALSE
 #| message: FALSE
 
 # same proportion in every fold, check if that is correct
@@ -144,7 +144,7 @@ auc(roc_obj)
 
 ```{r}
 #| echo: TRUE
-#| warnings: FALSE
+#| warning: FALSE
 #| message: FALSE
 # Calibration 
 
@@ -178,7 +178,7 @@ The calibration of the logistic regression model is evaluated using two calibrat
 
 ```{r}
 #| echo: TRUE
-#| warnings: FALSE
+#| warning: FALSE
 #| message: FALSE
 # Cross-validated calibration with intercept & slope
 
@@ -219,7 +219,7 @@ Below an Linear discriminant analysis is executed.
 
 ```{r}
 #| echo: TRUE
-#| warnings: FALSE
+#| warning: FALSE
 #| message: FALSE
 
 library(caret)
@@ -246,7 +246,7 @@ Both models are validated using 5-fold-cross-validation. For each fold the area 
 
 ```{r}
 #| echo: TRUE
-#| warnings: FALSE
+#| warning: FALSE
 #| message: FALSE
 # Mean performance across the 5 folds
 model_lda$results
@@ -267,7 +267,7 @@ the mean AUC of the performed cross validation of the LDA model is 0.733 and 0.7
 
 ```{r}
 #| echo: TRUE
-#| warnings: FALSE
+#| warning: FALSE
 #| message: FALSE
 glm_preds_compare <- model_glm$pred %>%
   dplyr::select(
@@ -295,7 +295,7 @@ compare_preds <- inner_join(
 
 ```{r}
 #| echo: TRUE
-#| warnings: FALSE
+#| warning: FALSE
 #| message: FALSE
 roc_glm_compare <- roc(
   response = compare_preds$obs,
