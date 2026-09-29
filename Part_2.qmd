@@ -25,6 +25,7 @@ editor: visual
 library(tidyverse)
 library(rsample)
 library(caret)
+library(rms)
 
 ## 1. Read fresh
 smart1 <- read.csv2("smartc.csv")
@@ -147,6 +148,7 @@ auc(roc_obj)
 
 # Question B
 
+
 ```{r}
 #| echo: TRUE
 
@@ -165,17 +167,18 @@ ggplot(cal_obj) +
   labs(title = "Calibration plot – test data",
        x = "Bin midpoint (predicted probability)",
        y = "Observed event percentage")
+   cal_obj$data[, c("bin", "Percent", "Count", "midpoint")]
 ```
+The calibration of the logistic regression model is evaluated using two calibration plots. First, the model is fitted on the training data (75%) and the predicted probabilities are calculated for the test data (25%). The test patients are divided into 10 bins based on their predicted risk, and for each bin the observed event percentage is plotted with a 95% confidence interval (see Figure). If the model is well calibrated, the points lie on the diagonal. In the first two bins (0–10% and 10–20%), which contain most of the patients, the observed event percentages are about 7% and 11%. These are close to the diagonal with narrow confidence intervals, meaning that for low-risk patients the predicted risks agree with the observed event rates. The bins at 25% and 35% are also close to the diagonal. At 45% and 55% the observed percentages (28% and 40%) are lower than predicted, but the confidence intervals are wide and still include the diagonal. Above 60% the bins contain only one or two patients (confidence intervals from 0 to 97.5%), and the 95% bin is empty, which our caret shows as 0%. These bins give no information about the calibration of the model. However, because the test set is small, the calibration for high-risk patients cannot be judged from this plot.Therefore, we also evaluate using 5-fold cross-validation on the full data set (n = 3873), in the same way as in question A
 
 ```{r}
 # Cross-validated calibration with intercept & slope
-library(rms)
 
 form <- EVENT ~ AGE + SEX + BMI + SYSTH + HDL + DIABETES + HISTCAR2 +
   HOMOC + log(CREAT) + STENOSIS + IMT + SMOKING + alcohol + albumin
 
 set.seed(2026)
-K      <- 10
+K      <- 5
 folds  <- sample(rep(1:K, length.out = nrow(smart1)))
 cvprob <- rep(NA_real_, nrow(smart1))
 
@@ -188,11 +191,16 @@ for (k in 1:K) {
 y01 <- as.numeric(smart1$EVENT) - 1
 
 cal_stats <- val.prob(cvprob, y01)   # draws the plot AND returns the statistics
-title("Cross-validated calibration plot (10-fold)")
+title("Cross-validated calibration plot (5-fold)")
 
 # Pull out the numbers you report in the text:
 round(cal_stats[c("Intercept", "Slope", "C (ROC)", "Brier")], 3)
 ```
+The calibration slope is 0.925 and the calibration intercept is -0.131. For good calibration the slope should be close to 1 and the intercept close to 0. A slope slightly below 1 means that the predictions are somewhat too extreme, mainly for high predicted risks, which indicates a little overfitting. This can be expected with 14 predictors and no variable selection. The intercept is estimated together with the slope and is therefore hard to interpret on its own. The mean absolute difference between predicted and observed risk (Eavg) is 0.005, meaning that on average the predictions agree with the observed outcomes. The Spiegelhalter test also shows no significant miscalibration (z = 0.556, p = 0.578). Confidence intervals for the intercept and slope were not calculated, but these could be obtained with bootstrap resampling.
+
+The histogram at the bottom of the plot shows that almost all patients have a predicted risk below 0.2, which is in line with the prevalence of around 12%. In this range the nonparametric curve follows the ideal line. Above a predicted risk of about 0.45 the curve falls below the ideal line. For example, for a predicted risk of about 0.85 the observed risk is only about 0.7. The maximum difference between predicted and observed risk (Emax) is 0.149 and lies in this high-risk range. This means that the model overestimates the risk for the small group of high-risk patients, which is in line with the slope below 1. The C-statistic of 0.736 is similar to the AUC from question A (0.73), and the Brier score is 0.095.
+
+In conclusion, the model is well calibrated for the large majority of patients with a predicted risk below 0.2 to 0.3, but overestimates the risk for the few patients with a high predicted risk.
 
 # Question C
 
