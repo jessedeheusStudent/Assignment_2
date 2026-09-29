@@ -171,10 +171,18 @@ ggplot(cal_obj) +
   labs(title = "Calibration plot – test data",
        x = "Bin midpoint (predicted probability)",
        y = "Observed event percentage")
-   cal_obj$data[, c("bin", "Percent", "Count", "midpoint")]
+
+# Number of patients and events per bin
+bins <- cut(testProbs$.pred_yes, breaks = seq(0, 1, 0.1), include.lowest = TRUE)
+data.frame(
+  patients     = as.vector(table(bins)),
+  events       = as.vector(tapply(testProbs$Class == "yes", bins, sum)),
+  observed_pct = round(as.vector(tapply(testProbs$Class == "yes", bins, mean)) * 100, 1),
+  row.names    = levels(bins)
+)
 ```
 
-The calibration of the logistic regression model is evaluated using two calibration plots. First, the model is fitted on the training data (75%) and the predicted probabilities are calculated for the test data (25%). The test patients are divided into 10 bins based on their predicted risk, and for each bin the observed event percentage is plotted with a 95% confidence interval (see Figure). If the model is well calibrated, the points lie on the diagonal. In the first two bins (0–10% and 10–20%), which contain most of the patients, the observed event percentages are about 7% and 11%. These are close to the diagonal with narrow confidence intervals, meaning that for low-risk patients the predicted risks agree with the observed event rates. The bins at 25% and 35% are also close to the diagonal. At 45% and 55% the observed percentages (28% and 40%) are lower than predicted, but the confidence intervals are wide and still include the diagonal. Above 60% the bins contain only one or two patients (confidence intervals from 0 to 97.5%), and the 95% bin is empty, which our caret shows as 0%. These bins give no information about the calibration of the model. However, because the test set is small, the calibration for high-risk patients cannot be judged from this plot.Therefore, we also evaluate using 5-fold cross-validation on the full data set (n = 3873), in the same way as in question A
+The calibration of the logistic regression model is evaluated using two calibration plots. First, the model is fitted on the training data (75%) and the predicted probabilities are calculated for the test data (25%). The test patients are divided into 10 bins based on their predicted risk, and for each bin the observed event percentage is plotted with a 95% confidence interval (see the figure above). If the model is well calibrated, the points lie on the diagonal. In the first two bins (0–10% and 10–20%), which contain most of the patients, the observed event percentages are about 7% and 11%. These are close to the diagonal with narrow confidence intervals, meaning that for low-risk patients the predicted risks agree with the observed event rates. The bins at 25% and 35% are also close to the diagonal. At 45% and 55% the observed percentages (28% and 40%) are lower than predicted, but the confidence intervals are wide and still include the diagonal. Above 60% the bins contain only one or two patients (confidence intervals from 0 to 97.5%), and the 95% bin is empty, which our caret shows as 0%. These bins give no information about the calibration of the model. However, because the test set is small, the calibration for high-risk patients cannot be judged from this plot.Therefore, we also evaluate using 5-fold cross-validation on the full data set (n = 3873).
 
 ```{r}
 #| echo: TRUE
@@ -198,18 +206,28 @@ for (k in 1:K) {
 # val.prob() needs the outcome as 0/1: factor "no"/"yes" -> 1/2 -> 0/1
 y01 <- as.numeric(smart1$EVENT) - 1
 
-cal_stats <- val.prob(cvprob, y01)   # draws the plot AND returns the statistics
+cal_stats <- val.prob(cvprob, y01)   # draws the plot and returns statistics
 title("Cross-validated calibration plot (5-fold)")
 
-# Pull out the numbers you report in the text:
+# Summary of main statistics seperate:
 round(cal_stats[c("Intercept", "Slope", "C (ROC)", "Brier")], 3)
+
+# 95% confidence intervals for the calibration intercept and slope
+lp <- qlogis(cvprob)   # cross-validated linear predictor
+
+recal <- glm(y01 ~ lp, family = binomial)
+round(cbind(estimate = coef(recal), confint.default(recal)), 3)
+
+# Calibration-in-the-large: intercept with slope fixed at 1
+citl <- glm(y01 ~ offset(lp), family = binomial)
+round(cbind(estimate = coef(citl), confint.default(citl)), 3)
 ```
 
-The calibration slope is 0.925 and the calibration intercept is -0.131. For good calibration the slope should be close to 1 and the intercept close to 0. A slope slightly below 1 means that the predictions are somewhat too extreme, mainly for high predicted risks, which indicates a little overfitting. This can be expected with 14 predictors and no variable selection. The intercept is estimated together with the slope and is therefore hard to interpret on its own. The mean absolute difference between predicted and observed risk (Eavg) is 0.005, meaning that on average the predictions agree with the observed outcomes. The Spiegelhalter test also shows no significant miscalibration (z = 0.556, p = 0.578). Confidence intervals for the intercept and slope were not calculated, but these could be obtained with bootstrap resampling.
+The calibration slope is 0.925 (95% CI 0.817–1.034) and the calibration intercept is -0.131 (95% CI -0.349–0.086). For good calibration the slope should be close to 1 and the intercept close to 0. A slope below 1 means that the predictions are somewhat too extreme, which suggests mild overfitting. However, the confidence interval includes 1, so there is no clear evidence of overfitting. Because the intercept is estimated together with the slope, it is hard to interpret on its own. Therefore, the calibration-in-the-large (the intercept with the slope fixed at 1) is also estimated. This is 0.000 (95% CI -0.104–0.103), meaning that on average the predicted risks agree with the observed event rate. The Spiegelhalter test also shows no significant miscalibration (z = 0.556, p = 0.578).
 
-The histogram at the bottom of the plot shows that almost all patients have a predicted risk below 0.2, which is in line with the prevalence of around 12%. In this range the nonparametric curve follows the ideal line. Above a predicted risk of about 0.45 the curve falls below the ideal line. For example, for a predicted risk of about 0.85 the observed risk is only about 0.7. The maximum difference between predicted and observed risk (Emax) is 0.149 and lies in this high-risk range. This means that the model overestimates the risk for the small group of high-risk patients, which is in line with the slope below 1. The C-statistic of 0.736 is similar to the AUC from question A (0.73), and the Brier score is 0.095.
+The histogram at the bottom of the plot shows that almost all patients have a predicted risk below 0.2, which is in line with the prevalence of around 12%. In this range the nonparametric curve follows the ideal line. Above a predicted risk of about 0.45 the curve falls below the ideal line, with a maximum difference (Emax) of 0.149. This means that the model overestimates the risk for the small group of high-risk patients, which is in line with the slope below 1.
 
-In conclusion, the model is well calibrated for the large majority of patients with a predicted risk below 0.2 to 0.3, but overestimates the risk for the few patients with a high predicted risk.
+In conclusion, the model is well calibrated for the large majority of patients, who have a low predicted risk. For the few patients with a high predicted risk, the model overestimates the risk, so these predictions should be interpreted with care.
 
 # Question C
 
