@@ -1,6 +1,9 @@
 ---
-title: "Part_2"
-format: html
+title: "Group6_Part2"
+format:
+  html: default
+  pdf:
+    code-overflow: wrap
 editor: visual
 ---
 
@@ -15,6 +18,11 @@ editor: visual
 
 ```{r}
 #| echo: TRUE
+<<<<<<< Updated upstream
+=======
+#| warning: FALSE
+#| message: FALSE
+>>>>>>> Stashed changes
 library(tidyverse)
 library(rsample)
 library(caret)
