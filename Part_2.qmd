@@ -1,8 +1,10 @@
 ---
-title: "Part_2"
+title: "Part_2 Group 6"
 format: html
 editor: visual
 ---
+
+Authors: Hilde Gelinck, Niels Pleijsier and Jesse de Heus
 
 ```{r}
 #| echo: FALSE
