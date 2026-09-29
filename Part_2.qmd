@@ -1,6 +1,9 @@
 ---
-title: "Part_2 Group 6"
-format: html
+title: "Group6_Part2"
+format:
+  pdf:
+    code-overflow: wrap
+  html: default
 editor: visual
 ---
 
