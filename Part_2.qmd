@@ -144,7 +144,7 @@ auc(roc_obj)
 
 Below, a comparison between the predictive performance of the logistic regression model and the Linear discriminant analysis model is made. For both analysis, the same predictors are used.
 
-Both models are validated using 5-fold-cross-validation. For each fold the area under the ROC (AUC) is determined. The mean AUC of these five values is used as estimate of the performance of the prediction of the model.
+Below an Linear discriminant analysis is executed.
 
 ```{r}
 #| echo: TRUE
@@ -170,6 +170,8 @@ print(model_lda)
 
 ```
 
+Both models are validated using 5-fold-cross-validation. For each fold the area under the ROC (AUC) is determined. The mean AUC of these five values is used as estimate of the performance of the prediction of the model.
+
 ```{r}
 warnings = FALSE
 message = FALSE
@@ -179,9 +181,11 @@ model_lda$results
 # Performance separately for each fold
 model_lda$resample
 
+cat("Linear discriminant analysis model: \n")
 mean_lda_auc <- model_lda$results$ROC
 mean_lda_auc
 
+cat("Logistic regression model: \n")
 mean_glm_auc <- model_glm$results$ROC
 mean_glm_auc
 ```
@@ -245,6 +249,6 @@ cat(
 )
 ```
 
-The 95% confidence interval of the AUC of the pooled out of fold validation is calculated for both models. In this method the predictions for all 5 folds were combined and one AUC is calculated. Instead of taking the average of the 5 AUCs. Which causes a small variation between this 2 methods.
+The 95% confidence interval of the AUC of the pooled out-of-fold validation is calculated for both models. In this method the predictions for all 5 folds were combined and one AUC is calculated. Instead of taking the average of the 5 AUCs. Which causes a small variation between this 2 methods.
 
 Using this out of fold method. For the logistic regression we have a estimated area under the curve of 0.7309, with a 95% confidence interval of (0.7058 ; 0.7561). For the LDA method we estimate the area under the curve 0.7304, with a 95% confidence interval of (0.7051;0.7557). So, the pooled AUCs of both models are almost identical with overlapping 95% confidence intervals. So with a 95% confidence interval there is no clear evidence of a difference between the 2 models.
