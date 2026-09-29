@@ -142,11 +142,14 @@ auc(roc_obj)
 
 # Question C
 
-jesse
+Below, a comparison between the predictive performance of the logistic regression model and the Linear discriminant analysis model is made. For both analysis, the same predictors are used.
+
+Both models are validated using 5-fold-cross-validation. For each fold the area under the ROC (AUC) is determined. The mean AUC of these five values is used as estimate of the performance of the prediction of the model.
 
 ```{r}
 #| echo: TRUE
-
+warnings = FALSE
+message = FALSE
 library(caret)
 library(MASS)
 library(pROC)
@@ -166,3 +169,82 @@ model_lda <- train(
 print(model_lda)
 
 ```
+
+```{r}
+warnings = FALSE
+message = FALSE
+# Mean performance across the 5 folds
+model_lda$results
+
+# Performance separately for each fold
+model_lda$resample
+
+mean_lda_auc <- model_lda$results$ROC
+mean_lda_auc
+
+mean_glm_auc <- model_glm$results$ROC
+mean_glm_auc
+```
+
+the mean AUC of the performed cross validation of the LDA model is 0.733 and 0.732 for the logistic regression model. So, the difference in AUC between the LDA and the logistic regression model is very small. However, this does not take uncertainty into account. Below we will find the 95% confidence interval of the AUC for both models.
+
+```{r}
+warnings = FALSE
+message = FALSE
+glm_preds_compare <- model_glm$pred %>%
+  dplyr::select(
+    rowIndex,
+    Resample,
+    obs,
+    glm_prob = yes
+  )
+
+lda_preds_compare <- model_lda$pred %>%
+  dplyr::select(
+    rowIndex,
+    Resample,
+    obs,
+    lda_prob = yes
+  )
+
+compare_preds <- inner_join(
+  glm_preds_compare,
+  lda_preds_compare,
+  by = c("rowIndex", "Resample", "obs")
+)
+
+```
+
+```{r}
+
+roc_glm_compare <- roc(
+  response = compare_preds$obs,
+  predictor = compare_preds$glm_prob,
+  levels = c("no", "yes")
+)
+
+roc_lda_compare <- roc(
+  response = compare_preds$obs,
+  predictor = compare_preds$lda_prob,
+  levels = c("no", "yes")
+)
+cat("Logistic regression model\n")
+cat("AUC:", round(as.numeric(auc(roc_glm_compare)), 4), "\n")
+cat(
+  "95% CI:",
+  round(ci.auc(roc_glm_compare)[1], 4), "-",
+  round(ci.auc(roc_glm_compare)[3], 4), "\n\n"
+)
+
+cat("Linear discriminant analysis model\n")
+cat("AUC:", round(as.numeric(auc(roc_lda_compare)), 4), "\n")
+cat(
+  "95% CI:",
+  round(ci.auc(roc_lda_compare)[1], 4), "-",
+  round(ci.auc(roc_lda_compare)[3], 4), "\n"
+)
+```
+
+The 95% confidence interval of the AUC of the pooled out of fold validation is calculated for both models. In this method the predictions for all 5 folds were combined and one AUC is calculated. Instead of taking the average of the 5 AUCs. Which causes a small variation between this 2 methods.
+
+Using this out of fold method. For the logistic regression we have a estimated area under the curve of 0.7309, with a 95% confidence interval of (0.7058 ; 0.7561). For the LDA method we estimate the area under the curve 0.7304, with a 95% confidence interval of (0.7051;0.7557). So, the pooled AUCs of both models are almost identical with overlapping 95% confidence intervals. So with a 95% confidence interval there is no clear evidence of a difference between the 2 models.
